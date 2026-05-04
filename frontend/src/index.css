@@ -4,6 +4,99 @@
 
 :root {
   --craft-primary: #a67f50;
+  /* Theme colors - default to classical */
+  --bg-start: #f8f6f3;
+  --bg-end: #e8dfd0;
+  --surface: #ffffff;
+  --surface-2: #f5f0e8;
+  --primary: #a67f50;
+  --primary-dark: #8a6640;
+  --primary-light: #cdb99a;
+  --text: #3d3027;
+  --text-2: #6e5135;
+  --text-3: #b8996e;
+  --border: #e2d6c6;
+  --accent: #c0392b;
+  --accent-2: #27ae60;
+  --accent-3: #f39c12;
+  --shadow: rgba(166,127,80,0.12);
+  --card-hover: rgba(166,127,80,0.15);
+}
+
+[data-theme="classical"] {
+  --bg-start: #f8f6f3;
+  --bg-end: #e8dfd0;
+  --surface: #ffffff;
+  --surface-2: #f5f0e8;
+  --primary: #a67f50;
+  --primary-dark: #8a6640;
+  --primary-light: #cdb99a;
+  --text: #3d3027;
+  --text-2: #6e5135;
+  --text-3: #b8996e;
+  --border: #e2d6c6;
+  --accent: #c0392b;
+  --accent-2: #27ae60;
+  --accent-3: #f39c12;
+  --shadow: rgba(166,127,80,0.12);
+  --card-hover: rgba(166,127,80,0.15);
+}
+
+[data-theme="modern"] {
+  --bg-start: #fafafa;
+  --bg-end: #f0f0f0;
+  --surface: #ffffff;
+  --surface-2: #f8f8f8;
+  --primary: #2c2c2c;
+  --primary-dark: #1a1a1a;
+  --primary-light: #8c8c8c;
+  --text: #1a1a1a;
+  --text-2: #555555;
+  --text-3: #999999;
+  --border: #e0e0e0;
+  --accent: #c8a96e;
+  --accent-2: #6b8e23;
+  --accent-3: #7a7a7a;
+  --shadow: rgba(0,0,0,0.06);
+  --card-hover: rgba(0,0,0,0.06);
+}
+
+[data-theme="cyber"] {
+  --bg-start: #0a0e17;
+  --bg-end: #0f1522;
+  --surface: #111827;
+  --surface-2: #1a2235;
+  --primary: #00d4ff;
+  --primary-dark: #00a8cc;
+  --primary-light: #4dd8e8;
+  --text: #e2e8f0;
+  --text-2: #94a3b8;
+  --text-3: #475569;
+  --border: #1e2d45;
+  --accent: #ff3366;
+  --accent-2: #00ff88;
+  --accent-3: #9b59b6;
+  --shadow: rgba(0,212,255,0.08);
+  --card-hover: rgba(0,212,255,0.15);
+}
+
+[data-theme="oriental"] {
+  --bg-start: #f5f0e8;
+  --bg-end: #e8dfc8;
+  --surface: #ffffff;
+  --surface-2: #f0ebe0;
+  --primary: #2c4a7c;
+  --primary-dark: #1e3660;
+  --primary-light: #6b8fc4;
+  --text: #2d3a4f;
+  --text-2: #5a6b80;
+  --text-3: #8c9db5;
+  --border: #cdb99a;
+  --accent: #d4a017;
+  --accent-2: #2e7d4a;
+  --accent-3: #8b4513;
+  --shadow: rgba(44,74,124,0.1);
+  --card-hover: rgba(44,74,124,0.12);
 }
 
 * {
@@ -14,78 +107,446 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: linear-gradient(135deg, #f8f6f3 0%, #e2d6c6 100%);
+  background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
   min-height: 100vh;
-  color: #3d3027;
+  color: var(--text);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* 替代度条带 */
-.replacement-bar {
-  height: 8px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #22c55e 0%, #eab308 50%, #ef4444 100%);
+/* =========================================
+   GLOBAL FORM INPUTS - Theme-aware
+   ========================================= */
+
+/* Default text inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"] {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+  box-shadow: 0 1px 2px var(--shadow);
 }
 
-/* 替代度标签颜色 */
-.score-high { color: #ef4444; }
-.score-mid { color: #eab308; }
-.score-low { color: #22c55e; }
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent), 0 1px 2px var(--shadow);
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="search"]::placeholder {
+  color: var(--text-3) !important;
+}
+
+/* Textarea */
+textarea {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  width: 100%;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  line-height: 1.6;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent), 0 1px 2px var(--shadow);
+}
+
+textarea::placeholder {
+  color: var(--text-3) !important;
+}
+
+/* Checkbox & Radio */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--primary) !important;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+/* Range slider */
+input[type="range"] {
+  accent-color: var(--primary) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* File input */
+input[type="file"] {
+  background-color: var(--surface-2) !important;
+  border: 1.5px dashed var(--border) !important;
+  color: var(--text-2) !important;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem !important;
+  font-size: 0.875rem;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+input[type="file"]::file-selector-button {
+  background-color: var(--primary) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.875rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-right: 0.75rem;
+  font-family: inherit;
+  transition: background-color 0.2s;
+}
+
+/* Search input (uses vars for bg) */
+.search-input {
+  width: 100%;
+  padding: 0.625rem 1rem 0.625rem 2.5rem;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  color: var(--text) !important;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+.search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+.search-input::placeholder {
+  color: var(--text-3) !important;
+}
+
+/* =========================================
+   HEADER / NAV
+   ========================================= */
+.header-bg {
+  background-color: var(--surface) !important;
+  transition: background-color 0.3s;
+}
+.header-border {
+  border-color: var(--border) !important;
+}
+
+/* =========================================
+   CRAFT COLOR SYSTEM -> CSS VAR MAPPING
+   ========================================= */
+.bg-craft-50  { background-color: var(--surface-2) !important; }
+.bg-craft-100 { background-color: var(--surface-2) !important; }
+.bg-craft-200 { background-color: var(--border) !important; }
+.bg-craft-600 { background-color: var(--primary) !important; }
+.bg-craft-700 { background-color: var(--primary-dark) !important; }
+
+.text-craft-100 { color: var(--text-3) !important; }
+.text-craft-200 { color: var(--text-3) !important; }
+.text-craft-300 { color: var(--text-3) !important; }
+.text-craft-400 { color: var(--text-3) !important; }
+.text-craft-500 { color: var(--text-2) !important; }
+.text-craft-600 { color: var(--primary) !important; }
+.text-craft-700 { color: var(--text) !important; }
+.text-craft-800 { color: var(--text) !important; }
+
+.border-craft-200 { border-color: var(--border) !important; }
+.border-craft-300 { border-color: var(--border) !important; }
+.border-craft-600 { border-color: var(--primary) !important; }
+
+.shadow-sm { box-shadow: 0 1px 3px var(--shadow) !important; }
+
+/* =========================================
+   CARDS & SURFACES
+   ========================================= */
+.bg-white { background-color: var(--surface) !important; }
 
 /* 卡片悬浮效果 */
 .card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(166, 127, 80, 0.15);
-}
-
-/* 趋势图标 */
-.trend-up { color: #ef4444; }
-.trend-down { color: #22c55e; }
-.trend-stable { color: #94a3b8; }
-
-/* 作品瀑布流 */
-.works-grid {
-  columns: 1;
-  column-gap: 1rem;
-}
-@media (min-width: 640px) {
-  .works-grid { columns: 2; }
-}
-@media (min-width: 1024px) {
-  .works-grid { columns: 3; }
-}
-@media (min-width: 1280px) {
-  .works-grid { columns: 4; }
+  box-shadow: 0 8px 25px var(--card-hover);
 }
 
 .work-card {
   break-inside: avoid;
   margin-bottom: 1rem;
+  background-color: var(--surface) !important;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: background-color 0.3s;
 }
 
-/* 输入框样式 */
-input, textarea {
-  font-family: inherit;
+/* =========================================
+   REPLACEMENT SCORE COLORS
+   ========================================= */
+.score-high { color: #ef4444 !important; }
+.score-mid  { color: #eab308 !important; }
+.score-low  { color: #22c55e !important; }
+
+.trend-up    { color: #ef4444 !important; }
+.trend-down  { color: #22c55e !important; }
+.trend-stable { color: #94a3b8 !important; }
+
+/* =========================================
+   MODAL / OVERLAY
+   ========================================= */
+.bg-black\/50 {
+  background-color: rgba(0,0,0,0.5) !important;
 }
 
-/* Mobile safe area for bottom nav */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0);
+/* =========================================
+   WORKS GRID (Masonry)
+   ========================================= */
+.works-grid {
+  columns: 1;
+  column-gap: 1rem;
+}
+@media (min-width: 640px) { .works-grid { columns: 2; } }
+@media (min-width: 1024px) { .works-grid { columns: 3; } }
+@media (min-width: 1280px) { .works-grid { columns: 4; } }
+
+/* =========================================
+   SCROLLBAR
+   ========================================= */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* =========================================
+   MOBILE UTILS
+   ========================================= */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+a, button { -webkit-tap-highlight-color: transparent; }
+html { scroll-behavior: smooth; }
+body { overscroll-behavior-y: contain; }
+
+/* =========================================
+   THEME-SPECIFIC OVERRIDES
+   ========================================= */
+
+/* Modern theme - slightly sharper corners, no heavy shadows */
+[data-theme="modern"] input[type="text"],
+[data-theme="modern"] input[type="email"],
+[data-theme="modern"] input[type="password"],
+[data-theme="modern"] textarea {
+  border-radius: 0.5rem;
+  box-shadow: none;
+  border-width: 1px;
+}
+[data-theme="modern"] .card-hover:hover {
+  box-shadow: 0 4px 12px var(--card-hover);
 }
 
-/* Mobile tap highlight removal */
-a, button {
-  -webkit-tap-highlight-color: transparent;
+/* Cyber theme - neon glow effects */
+[data-theme="cyber"] body {
+  --craft-primary: #00d4ff;
+}
+[data-theme="cyber"] .bg-craft-600,
+[data-theme="cyber"] .bg-craft-700 {
+  background-color: var(--primary-dark) !important;
+}
+[data-theme="cyber"] .bg-gradient-to-br,
+[data-theme="cyber"] .bg-gradient-to-r { opacity: 0.85; }
+
+[data-theme="cyber"] input[type="text"],
+[data-theme="cyber"] input[type="email"],
+[data-theme="cyber"] input[type="password"],
+[data-theme="cyber"] textarea {
+  box-shadow: 0 0 0 1px var(--border);
+}
+[data-theme="cyber"] input[type="text"]:focus,
+[data-theme="cyber"] textarea:focus {
+  box-shadow: 0 0 0 1px var(--primary), 0 0 16px color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  border-color: var(--primary) !important;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+[data-theme="cyber"] .card-hover:hover {
+  box-shadow: 0 0 24px var(--card-hover), 0 8px 32px var(--shadow) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 60%, transparent) !important;
 }
 
-/* Mobile body scroll fix */
-body {
-  overscroll-behavior-y: contain;
+[data-theme="cyber"] button.bg-craft-600,
+[data-theme="cyber"] button.bg-craft-700 {
+  background-color: var(--primary-dark) !important;
+  color: var(--text) !important;
+}
+[data-theme="cyber"] a.bg-craft-600 {
+  background-color: var(--primary-dark) !important;
+}
+[data-theme="cyber"] .bg-craft-600.text-white { color: #000 !important; }
+
+/* Oriental theme - warm accent on focus */
+[data-theme="oriental"] input[type="text"]:focus,
+[data-theme="oriental"] textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent) !important;
+}
+
+/* =========================================
+   QUICK ENTRY CARDS (Homepage)
+   ========================================= */
+
+.quick-card {
+  position: relative;
+  background-color: var(--surface) !important;
+  border: 1.5px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  display: block;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+}
+
+.quick-card:hover {
+  transform: translateY(-3px);
+}
+
+.quick-card__icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.quick-card__title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.quick-card__desc {
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+.quick-card__arrow {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  font-size: 1.2rem;
+  color: var(--text-3);
+  transition: transform 0.2s, color 0.2s;
+}
+.quick-card:hover .quick-card__arrow {
+  transform: translateX(4px);
+  color: var(--primary);
+}
+
+/* Exhibition card */
+.quick-card--exhibition {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+.quick-card--exhibition:hover {
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+.quick-card--exhibition .quick-card__icon { color: var(--accent); }
+.quick-card--exhibition .quick-card__desc { color: var(--accent); opacity: 0.7; }
+
+/* Danger card */
+.quick-card--danger {
+  border-color: color-mix(in srgb, #ef4444 25%, var(--border));
+}
+.quick-card--danger:hover {
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+.quick-card--danger .quick-card__icon { color: #ef4444; }
+.quick-card--danger .quick-card__title { color: #dc2626; }
+.quick-card--danger .quick-card__desc { color: #f87171; }
+.quick-card--danger .quick-card__arrow { color: #f87171; }
+
+/* Safe card */
+.quick-card--safe {
+  border-color: color-mix(in srgb, #22c55e 25%, var(--border));
+}
+.quick-card--safe:hover {
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+.quick-card--safe .quick-card__icon { color: #22c55e; }
+.quick-card--safe .quick-card__title { color: #16a34a; }
+.quick-card--safe .quick-card__desc { color: #4ade80; }
+.quick-card--safe .quick-card__arrow { color: #4ade80; }
+
+/* Cyber theme overrides for quick cards */
+[data-theme="cyber"] .quick-card--exhibition {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+[data-theme="cyber"] .quick-card--danger {
+  border-color: rgba(255, 51, 102, 0.35);
+}
+[data-theme="cyber"] .quick-card--safe {
+  border-color: rgba(0, 255, 136, 0.35);
+}
+[data-theme="cyber"] .quick-card:hover {
+  box-shadow: 0 0 20px var(--card-hover), 0 8px 24px var(--shadow) !important;
+}
+
+/* =========================================
+   INSIGHT CARD
+   ========================================= */
+.insight-card {
+  border-left: 3px solid var(--primary);
+  background-color: var(--surface) !important;
+}
+
+/* =========================================
+   STATS ACCENT
+   ========================================= */
+.accent-red {
+  color: #ef4444 !important;
+}
+.accent-green {
+  color: #22c55e !important;
+}
+.accent-yellow {
+  color: #eab308 !important;
+}
+
+/* =========================================
+   OVERRIDE TAILWIND UTILITIES THAT MIGHT
+   LEAK THROUGH
+   ========================================= */
+
+/* Make sure any bg-white on cards uses var */
+div[class*="bg-white"],
+section[class*="bg-white"] {
+  background-color: var(--surface) !important;
+}
+
+/* Form page backgrounds */
+[data-theme="classical"] input.bg-white,
+[data-theme="modern"] input.bg-white,
+[data-theme="oriental"] input.bg-white {
+  background-color: var(--surface) !important;
 }

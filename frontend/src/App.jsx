@@ -22,23 +22,31 @@ export const AuthContext = createContext(null)
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('crafttrace_user')
-    return stored ? JSON.parse(stored) : null
+    try {
+      const stored = localStorage.getItem('crafttrace_user')
+      return stored ? JSON.parse(stored) : null
+    } catch { return null }
   })
-  const [token, setToken] = useState(() => localStorage.getItem('crafttrace_token') || '')
+  const [token, setToken] = useState(() => {
+    try { return localStorage.getItem('crafttrace_token') || '' } catch { return '' }
+  })
 
-  const login = (userData, token) => {
+  const login = (userData, userToken) => {
     setUser(userData)
-    setToken(token)
-    localStorage.setItem('crafttrace_user', JSON.stringify(userData))
-    localStorage.setItem('crafttrace_token', token)
+    setToken(userToken)
+    try {
+      localStorage.setItem('crafttrace_user', JSON.stringify(userData))
+      localStorage.setItem('crafttrace_token', userToken)
+    } catch {}
   }
 
   const logout = () => {
     setUser(null)
     setToken('')
-    localStorage.removeItem('crafttrace_user')
-    localStorage.removeItem('crafttrace_token')
+    try {
+      localStorage.removeItem('crafttrace_user')
+      localStorage.removeItem('crafttrace_token')
+    } catch {}
   }
 
   return (
@@ -51,7 +59,7 @@ function AuthProvider({ children }) {
 export { API }
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/crafttrace">
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Layout />}>

@@ -2,25 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { API } from '../App'
 
-const ScoreBar = ({ score }) => {
-  const getColor = (s) => {
-    if (s >= 70) return 'bg-red-500'
-    if (s >= 40) return 'bg-yellow-500'
-    return 'bg-green-500'
-  }
-  return (
-    <div className="w-full bg-gray-200 rounded-full h-2">
-      <div className={`h-2 rounded-full ${getColor(score)}`} style={{ width: `${score}%` }} />
-    </div>
-  )
-}
-
-const TrendIcon = ({ trend }) => {
-  if (trend === 'up') return <span className="text-red-500">↑</span>
-  if (trend === 'down') return <span className="text-green-500">↓</span>
-  return <span className="text-gray-400">→</span>
-}
-
 export default function Home() {
   const [stats, setStats] = useState(null)
   const [insights, setInsights] = useState([])
@@ -49,7 +30,7 @@ export default function Home() {
               <div className="text-craft-400">人类作品</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-craft-600">{stats.high_replacement_count}</div>
+              <div className="text-2xl font-bold accent-red">{stats.high_replacement_count}</div>
               <div className="text-craft-400">高替代工种</div>
             </div>
           </div>
@@ -64,12 +45,12 @@ export default function Home() {
         </div>
         <div className="grid md:grid-cols-3 gap-4">
           {insights.map(insight => (
-            <div key={insight.id} className="bg-white rounded-xl p-5 shadow-sm card-hover">
+            <div key={insight.id} className="bg-white rounded-xl p-5 shadow-sm card-hover insight-card">
               <div className="text-xs text-craft-400 mb-2">{insight.date}</div>
               <h3 className="font-medium text-craft-800 mb-2">{insight.title}</h3>
               <p className="text-sm text-craft-500 line-clamp-3">{insight.content}</p>
               {insight.score_change !== null && (
-                <div className={`mt-3 text-sm font-medium ${insight.score_change > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                <div className={`mt-3 text-sm font-medium ${insight.score_change > 0 ? 'trend-up' : 'trend-down'}`}>
                   {insight.score_change > 0 ? '↑' : '↓'} {Math.abs(insight.score_change)}%
                 </div>
               )}
@@ -94,8 +75,8 @@ export default function Home() {
             <div key={work.id} className="bg-white rounded-xl overflow-hidden shadow-sm card-hover">
               {work.image_url && (
                 <div className="aspect-square bg-craft-100 flex items-center justify-center">
-                  <img 
-                    src={`http://localhost:5001${work.image_url}`} 
+                  <img
+                    src={`http://localhost:5001${work.image_url}`}
                     alt={work.title}
                     className="object-cover w-full h-full"
                     onError={(e) => e.target.style.display = 'none'}
@@ -119,23 +100,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 快速入口 */}
+      {/* 快速入口 - 主题感卡片 */}
       <section>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Link to="/exhibition" className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl p-5 text-white card-hover">
-            <div className="text-3xl mb-2">🏛️</div>
-            <div className="font-semibold">人类展览馆</div>
-            <div className="text-sm opacity-80">与历史人物对话</div>
+          <Link to="/exhibition" className="quick-card quick-card--exhibition rounded-xl p-5 card-hover group">
+            <div className="quick-card__icon mb-2">🏛️</div>
+            <div className="quick-card__title">人类展览馆</div>
+            <div className="quick-card__desc">与历史人物对话</div>
+            <div className="quick-card__arrow">→</div>
           </Link>
-          <Link to="/occupations?filter=high" className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white card-hover">
-            <div className="text-3xl mb-2">⚠️</div>
-            <div className="font-semibold">高替代工种</div>
-            <div className="text-sm opacity-80">替代度 80%+</div>
+          <Link to="/occupations?filter=high" className="quick-card quick-card--danger rounded-xl p-5 card-hover group">
+            <div className="quick-card__icon mb-2">⚠️</div>
+            <div className="quick-card__title">高替代工种</div>
+            <div className="quick-card__desc">替代度 80%+</div>
+            <div className="quick-card__arrow">→</div>
           </Link>
-          <Link to="/occupations?filter=low" className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white card-hover">
-            <div className="text-3xl mb-2">🛡️</div>
-            <div className="font-semibold">低替代工种</div>
-            <div className="text-sm opacity-80">替代度 40%以下</div>
+          <Link to="/occupations?filter=low" className="quick-card quick-card--safe rounded-xl p-5 card-hover group">
+            <div className="quick-card__icon mb-2">🛡️</div>
+            <div className="quick-card__title">低替代工种</div>
+            <div className="quick-card__desc">替代度 40% 以下</div>
+            <div className="quick-card__arrow">→</div>
           </Link>
         </div>
       </section>

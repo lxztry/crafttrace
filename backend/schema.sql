@@ -1,4 +1,5 @@
 -- 匠迹 数据库结构
+-- v2: 新增职业分析报告字段
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,7 +21,20 @@ CREATE TABLE IF NOT EXISTS occupations (
     score_count INTEGER DEFAULT 0,
     trend TEXT DEFAULT 'stable',
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    initial_score REAL DEFAULT 50.0
+    initial_score REAL DEFAULT 50.0,
+    -- 新增：AI分析报告字段
+    ai_status TEXT DEFAULT 'unknown',        -- 'hot' 热门新生 / 'augmented' AI增强 / 'stable' 人类坚守 / 'danger' 高危
+    salary_range TEXT,                        -- e.g. "8K-25K"
+    education_level TEXT,                     -- '初中' '高中' '大专' '本科' '硕士' '博士'
+    entry_difficulty TEXT,                    -- '简单' '中等' '困难' '极难'
+    experience_years TEXT,                    -- e.g. "0-3年" "3-5年" "5-10年" "10年+"
+    skills_json TEXT,                         -- JSON数组: [{"name":"沟通能力","level":80},...]
+    growth_stages_json TEXT,                  -- JSON数组: [{"stage":"入门","time":"0-1年","desc":"...","salary":"6-10K"},...]
+    adjacent_jobs_json TEXT,                  -- JSON数组: [{"name":"产品经理","match":75,"salary":"15-30K"},...]
+    ai_advantage_json TEXT,                   -- JSON数组: AI擅长的点
+    human_advantage_json TEXT,               -- JSON数组: 人类优势的点
+    ai_impact_detail TEXT,                   -- AI对这个职业的具体影响描述
+    keywords_json TEXT                        -- JSON数组: 搜索关键词
 );
 
 CREATE TABLE IF NOT EXISTS works (
@@ -43,8 +57,6 @@ CREATE TABLE IF NOT EXISTS votes (
     occupation_id INTEGER NOT NULL,
     score INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (occupation_id) REFERENCES occupations(id),
     UNIQUE(user_id, occupation_id)
 );
 
@@ -55,17 +67,13 @@ CREATE TABLE IF NOT EXISTS insights (
     content TEXT NOT NULL,
     occupation_id INTEGER,
     score_change REAL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (occupation_id) REFERENCES occupations(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS likes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     work_id INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (work_id) REFERENCES works(id),
     UNIQUE(user_id, work_id)
 );
 
@@ -74,9 +82,7 @@ CREATE TABLE IF NOT EXISTS comments (
     user_id INTEGER NOT NULL,
     work_id INTEGER NOT NULL,
     content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (work_id) REFERENCES works(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS follows (
@@ -84,17 +90,14 @@ CREATE TABLE IF NOT EXISTS follows (
     user_id INTEGER NOT NULL,
     occupation_id INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, occupation_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (occupation_id) REFERENCES occupations(id)
+    UNIQUE(user_id, occupation_id)
 );
 
 CREATE TABLE IF NOT EXISTS score_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     occupation_id INTEGER NOT NULL,
     score REAL NOT NULL,
-    recorded_at DATE DEFAULT (date('now')),
-    FOREIGN KEY (occupation_id) REFERENCES occupations(id)
+    recorded_at DATE DEFAULT (date('now'))
 );
 
 CREATE TABLE IF NOT EXISTS milestones (
@@ -105,8 +108,7 @@ CREATE TABLE IF NOT EXISTS milestones (
     occupation_id INTEGER,
     score_before REAL,
     score_after REAL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (occupation_id) REFERENCES occupations(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS exhibits (
@@ -120,6 +122,5 @@ CREATE TABLE IF NOT EXISTS exhibits (
     is_public INTEGER DEFAULT 1,
     is_preset INTEGER DEFAULT 0,
     chat_count INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (creator_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
