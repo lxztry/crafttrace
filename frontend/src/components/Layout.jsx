@@ -7,6 +7,7 @@ const NAV = [
   { path: '/occupations', icon: '🏭', label: '工种' },
   { path: '/upload', icon: '📤', label: '上传' },
   { path: '/gallery', icon: '🖼️', label: '画廊' },
+  { path: '/leaderboard', icon: '🏆', label: '排行' },
   { path: '/profile', icon: '👤', label: '我的' },
 ]
 
@@ -315,6 +316,7 @@ export default function Layout() {
               {[
                 ['/insights', '💡', '洞察'],
                 ['/milestones', '📌', '里程碑'],
+                ['/leaderboard', '🏆', '排行'],
               ].map(([p, ico, lbl]) => (
                 <Link key={p} to={p}
                   className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 transition-colors ${

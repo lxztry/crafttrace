@@ -984,6 +984,302 @@ def get_all_follows():
     return jsonify([dict(r) for r in rows])
 
 
+# ============ Phase 2.1: 社交功能 ============
+
+def add_points(db, user_id, points, activity_type, description, target_id=None):
+    """增加用户积分并记录动态"""
+    from datetime import date
+    today = date.today().isoformat()
+    
+    # 获取或创建积分记录
+    row = db.execute('SELECT * FROM user_points WHERE user_id = ?', (user_id,)).fetchone()
+    if row:
+        # 检查是否需要重置周积分
+        week_started = row['week_started_at']
+        if week_started != today[:7]:  # 不同月份，重置周积分
+            db.execute('UPDATE user_points SET week_points=0, week_started_at=? WHERE user_id=?', (today[:7], user_id))
+        db.execute('UPDATE user_points SET total_points=total_points+?, updated_at=CURRENT_TIMESTAMP WHERE user_id=?', (points, user_id))
+    else:
+        db.execute('INSERT INTO user_points (user_id, total_points, week_points, week_started_at) VALUES (?, ?, ?, ?)',
+            (user_id, points, points, today[:7]))
+    
+    db.execute('''INSERT INTO user_activities (user_id, activity_type, target_id, description, points_earned) VALUES (?, ?, ?, ?, ?)''',
+        (user_id, activity_type, target_id, description, points))
+
+
+@app.route('/api/users/<int:user_id>/follow', methods=['POST'])
+def follow_user(user_id):
+    """关注用户"""
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        return jsonify({'error': '请先登录'}), 401
+    follower_id = int(token)
+    if follower_id == user_id:
+        return jsonify({'error': '不能关注自己'}), 400
+    
+    db = get_db()
+    try:
+        db.execute('INSERT INTO user_follows (follower_id, following_id) VALUES (?, ?)', (follower_id, user_id))
+        db.commit()
+        add_points(db, follower_id, 1, 'follow_user', f'关注了用户{user_id}', user_id)
+        
+        follower_count = db.execute('SELECT COUNT(*) FROM user_follows WHERE following_id = ?', (user_id,)).fetchone()[0]
+        following_count = db.execute('SELECT COUNT(*) FROM user_follows WHERE follower_id = ?', (user_id,)).fetchone()[0]
+        return jsonify({'followed': True, 'follower_count': follower_count, 'following_count': following_count})
+    except Exception as e:
+        if 'UNIQUE' in str(e):
+            return jsonify({'error': '已经关注过了'}), 400
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/users/<int:user_id>/follow', methods=['DELETE'])
+def unfollow_user(user_id):
+    """取消关注"""
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        return jsonify({'error': '请先登录'}), 401
+    follower_id = int(token)
+    
+    db = get_db()
+    db.execute('DELETE FROM user_follows WHERE follower_id=? AND following_id=?', (follower_id, user_id))
+    db.commit()
+    
+    follower_count = db.execute('SELECT COUNT(*) FROM user_follows WHERE following_id = ?', (user_id,)).fetchone()[0]
+    following_count = db.execute('SELECT COUNT(*) FROM user_follows WHERE follower_id = ?', (user_id,)).fetchone()[0]
+    return jsonify({'followed': False, 'follower_count': follower_count, 'following_count': following_count})
+
+
+@app.route('/api/users/<int:user_id>/followers', methods=['GET'])
+def get_followers(user_id):
+    """获取用户粉丝列表"""
+    db = get_db()
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    offset = (page - 1) * limit
+    
+    rows = db.execute('''
+        SELECT u.id, u.username, u.avatar_url, u.bio
+        FROM user_follows f
+        JOIN users u ON f.follower_id = u.id
+        WHERE f.following_id = ?
+        ORDER BY f.created_at DESC
+        LIMIT ? OFFSET ?
+    ''', (user_id, limit, offset)).fetchall()
+    
+    total = db.execute('SELECT COUNT(*) FROM user_follows WHERE following_id = ?', (user_id,)).fetchone()[0]
+    
+    return jsonify({
+        'data': [dict(r) for r in rows],
+        'total': total,
+        'page': page,
+        'limit': limit
+    })
+
+
+@app.route('/api/users/<int:user_id>/following', methods=['GET'])
+def get_following(user_id):
+    """获取用户关注列表"""
+    db = get_db()
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    offset = (page - 1) * limit
+    
+    rows = db.execute('''
+        SELECT u.id, u.username, u.avatar_url, u.bio
+        FROM user_follows f
+        JOIN users u ON f.following_id = u.id
+        WHERE f.follower_id = ?
+        ORDER BY f.created_at DESC
+        LIMIT ? OFFSET ?
+    ''', (user_id, limit, offset)).fetchall()
+    
+    total = db.execute('SELECT COUNT(*) FROM user_follows WHERE follower_id = ?', (user_id,)).fetchone()[0]
+    
+    return jsonify({
+        'data': [dict(r) for r in rows],
+        'total': total,
+        'page': page,
+        'limit': limit
+    })
+
+
+@app.route('/api/users/<int:user_id>/follow-status', methods=['GET'])
+def get_follow_status(user_id):
+    """获取当前用户对某用户的关注状态"""
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        return jsonify({'is_following': False})
+    
+    my_id = int(token)
+    db = get_db()
+    exists = db.execute('SELECT id FROM user_follows WHERE follower_id=? AND following_id=?', (my_id, user_id)).fetchone()
+    
+    follower_count = db.execute('SELECT COUNT(*) FROM user_follows WHERE following_id = ?', (user_id,)).fetchone()[0]
+    following_count = db.execute('SELECT COUNT(*) FROM user_follows WHERE follower_id = ?', (user_id,)).fetchone()[0]
+    
+    return jsonify({
+        'is_following': exists is not None,
+        'follower_count': follower_count,
+        'following_count': following_count
+    })
+
+
+@app.route('/api/users/<int:user_id>/activities', methods=['GET'])
+def get_user_activities(user_id):
+    """获取用户动态"""
+    db = get_db()
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    offset = (page - 1) * limit
+    
+    rows = db.execute('''
+        SELECT * FROM user_activities
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+    ''', (user_id, limit, offset)).fetchall()
+    
+    total = db.execute('SELECT COUNT(*) FROM user_activities WHERE user_id = ?', (user_id,)).fetchone()[0]
+    
+    return jsonify({
+        'data': [dict(r) for r in rows],
+        'total': total
+    })
+
+
+@app.route('/api/users/<int:user_id>/points', methods=['GET'])
+def get_user_points(user_id):
+    """获取用户积分信息"""
+    db = get_db()
+    row = db.execute('SELECT * FROM user_points WHERE user_id = ?', (user_id,)).fetchone()
+    if not row:
+        return jsonify({
+            'total_points': 0, 'week_points': 0, 'rank': '—',
+            'work_count': 0, 'vote_count': 0, 'follow_count': 0, 'comment_count': 0
+        })
+    
+    rank = db.execute('''
+        SELECT COUNT(*) + 1 FROM user_points WHERE total_points > ?
+    ''', (row['total_points'],)).fetchone()[0]
+    
+    return jsonify({
+        'total_points': row['total_points'],
+        'week_points': row['week_points'],
+        'rank': rank,
+        'work_count': row['work_count'],
+        'vote_count': row['vote_count'],
+        'follow_count': row['follow_count'],
+        'comment_count': row['comment_count']
+    })
+
+
+@app.route('/api/leaderboard', methods=['GET'])
+def get_leaderboard():
+    """排行榜"""
+    db = get_db()
+    limit = request.args.get('limit', 20, type=int)
+    period = request.args.get('period', 'all')  # 'all' or 'weekly'
+    
+    if period == 'weekly':
+        rows = db.execute('''
+            SELECT u.id, u.username, u.avatar_url, p.week_points as total_points,
+                   (SELECT COUNT(*) FROM works w WHERE w.user_id = u.id) as work_count
+            FROM users u
+            JOIN user_points p ON u.id = p.user_id
+            WHERE p.week_points > 0
+            ORDER BY p.week_points DESC
+            LIMIT ?
+        ''', (limit,)).fetchall()
+    else:
+        rows = db.execute('''
+            SELECT u.id, u.username, u.avatar_url, p.total_points,
+                   (SELECT COUNT(*) FROM works w WHERE w.user_id = u.id) as work_count
+            FROM users u
+            JOIN user_points p ON u.id = p.user_id
+            ORDER BY p.total_points DESC
+            LIMIT ?
+        ''', (limit,)).fetchall()
+    
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/works/<int:work_id>/comments', methods=['GET'])
+def get_work_comments(work_id):
+    """获取作品评论"""
+    db = get_db()
+    rows = db.execute('''
+        SELECT c.*, u.username, u.avatar_url
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.work_id = ?
+        ORDER BY c.created_at DESC
+    ''', (work_id,)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/works/<int:work_id>/comments', methods=['POST'])
+def add_work_comment(work_id):
+    """添加作品评论"""
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        return jsonify({'error': '请先登录'}), 401
+    user_id = int(token)
+    
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    if not content:
+        return jsonify({'error': '评论不能为空'}), 400
+    
+    db = get_db()
+    db.execute('INSERT INTO comments (user_id, work_id, content) VALUES (?, ?, ?)', (user_id, work_id, content))
+    db.commit()
+    add_points(db, user_id, 2, 'comment', f'评论了作品{work_id}', work_id)
+    
+    comment = db.execute('''
+        SELECT c.*, u.username, u.avatar_url FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.id = (SELECT last_insert_rowid())
+    ''').fetchone()
+    return jsonify(dict(comment))
+
+
+@app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
+def delete_comment(comment_id):
+    """删除评论"""
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        return jsonify({'error': '请先登录'}), 401
+    user_id = int(token)
+    
+    db = get_db()
+    comment = db.execute('SELECT * FROM comments WHERE id = ?', (comment_id,)).fetchone()
+    if not comment:
+        return jsonify({'error': '评论不存在'}), 404
+    if comment['user_id'] != user_id:
+        return jsonify({'error': '无权删除'}), 403
+    
+    db.execute('DELETE FROM comments WHERE id = ?', (comment_id,))
+    db.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/feed', methods=['GET'])
+def get_feed():
+    """获取动态信息流（所有用户最新动态）"""
+    db = get_db()
+    limit = request.args.get('limit', 30, type=int)
+    
+    rows = db.execute('''
+        SELECT a.*, u.username, u.avatar_url
+        FROM user_activities a
+        JOIN users u ON a.user_id = u.id
+        ORDER BY a.created_at DESC
+        LIMIT ?
+    ''', (limit,)).fetchall()
+    
+    return jsonify([dict(r) for r in rows])
+
+
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5001, debug=True)

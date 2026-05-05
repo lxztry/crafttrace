@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { API, AuthContext } from '../App'
 import { useToast } from '../components/Toast'
 
@@ -41,7 +41,7 @@ function AvatarUpload({ user, onUpdate }) {
       <img
         src={avatarUrl}
         alt={user?.username}
-        style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2d6c6' }}
+        style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
         onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${user?.username}&backgroundColor=a67f50` }}
       />
       <div style={{
@@ -57,46 +57,78 @@ function AvatarUpload({ user, onUpdate }) {
 }
 
 export default function Profile() {
-  const { user: authUser, login, logout } = useContext(AuthContext)
+  const { userId } = useParams()
+  const { user: authUser, token, login, logout } = useContext(AuthContext)
   const { addToast } = useToast()
+  
+  const isOwn = !userId || userId == authUser?.id
+  const profileId = isOwn ? authUser?.id : parseInt(userId)
+
   const [activeTab, setActiveTab] = useState('works')
   const [works, setWorks] = useState([])
-  const [followed, setFollowed] = useState([])
-  const [user, setUser] = useState(null)
+  const [profileUser, setProfileUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loginUsername, setLoginUsername] = useState('')
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [isRegister, setIsRegister] = useState(false)
-  const [userStats, setUserStats] = useState({ works_count: 0, likes_count: 0, follows_count: 0 })
+  const [userStats, setUserStats] = useState({ works_count: 0, likes_count: 0, followers_count: 0, following_count: 0, total_points: 0, week_points: 0, rank: '—', activity_count: 0 })
+  const [followStatus, setFollowStatus] = useState({ is_following: false, follower_count: 0, following_count: 0 })
+  const [activities, setActivities] = useState([])
+  const [followedOccupations, setFollowedOccupations] = useState([])
 
   useEffect(() => {
-    if (!authUser) { setLoading(false); return }
-    setUser(authUser)
-    fetchUserData(authUser.id)
-  }, [authUser])
+    if (!authUser && !userId) { setLoading(false); return }
+    const uid = isOwn ? authUser.id : parseInt(userId)
+    if (!uid) { setLoading(false); return }
+    fetchProfile(uid)
+  }, [authUser, userId])
 
-  const fetchUserData = (userId) => {
-    fetch(`${API}/users/${userId}`)
-      .then(r => r.json())
-      .then(data => { setUser(data); setLoading(false) })
-      .catch(() => setLoading(false))
-
-    fetch(`${API}/works?user_id=${userId}&limit=100`)
-      .then(r => r.json())
-      .then(data => {
-        const arr = Array.isArray(data) ? data : []
-        setWorks(arr)
-        setUserStats(prev => ({ ...prev, works_count: arr.length, likes_count: arr.reduce((a, w) => a + (w.likes_count || 0), 0) }))
+  const fetchProfile = (uid) => {
+    setLoading(true)
+    Promise.all([
+      fetch(`${API}/users/${uid}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${API}/works?user_id=${uid}&limit=100`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/follows?user_id=${uid}`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/users/${uid}/points`).then(r => r.json()).catch(() => ({})),
+      fetch(`${API}/users/${uid}/activities?limit=10`).then(r => r.json()).catch(() => ({data:[]})),
+      isOwn ? Promise.resolve(null) : fetch(`${API}/users/${uid}/follow-status`).then(r => r.json()).catch(() => ({})),
+    ]).then(([userData, worksData, occFollowData, pointsData, actsData, flwData]) => {
+      setProfileUser(userData)
+      setWorks(Array.isArray(worksData) ? worksData : [])
+      setFollowedOccupations(Array.isArray(occFollowData) ? occFollowData : [])
+      setUserStats({
+        works_count: Array.isArray(worksData) ? worksData.length : 0,
+        likes_count: Array.isArray(worksData) ? worksData.reduce((a, w) => a + (w.likes_count || 0), 0) : 0,
+        followers_count: flwData?.follower_count || 0,
+        following_count: flwData?.following_count || 0,
+        total_points: pointsData?.total_points || 0,
+        week_points: pointsData?.week_points || 0,
+        rank: pointsData?.rank || '—',
+        activity_count: (actsData?.data || []).length,
       })
+      setFollowStatus(flwData || { is_following: false, follower_count: 0, following_count: 0 })
+      setActivities(actsData?.data || [])
+      setLoading(false)
+    })
+  }
 
-    fetch(`${API}/follows?user_id=${userId}`)
-      .then(r => r.json())
-      .then(data => {
-        const arr = Array.isArray(data) ? data : []
-        setFollowed(arr)
-        setUserStats(prev => ({ ...prev, follows_count: arr.length }))
+  const handleFollow = async () => {
+    if (!authUser) { addToast('请先登录', 'warning'); return }
+    try {
+      const method = followStatus.is_following ? 'DELETE' : 'POST'
+      const res = await fetch(`${API}/users/${profileId}/follow`, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       })
+      const data = await res.json()
+      setFollowStatus({
+        is_following: method === 'POST' ? true : false,
+        follower_count: data.follower_count || followStatus.follower_count,
+        following_count: data.following_count || followStatus.following_count,
+      })
+      addToast(followStatus.is_following ? '取消关注' : '关注成功', 'success')
+    } catch { addToast('操作失败', 'error') }
   }
 
   const handleAuth = async (e) => {
@@ -128,25 +160,12 @@ export default function Profile() {
 
   const handleLogout = () => {
     logout()
-    setUser(null); setWorks([]); setFollowed([])
-    setUserStats({ works_count: 0, likes_count: 0, follows_count: 0 })
+    setProfileUser(null); setWorks([]); setFollowedOccupations([])
+    setUserStats({ works_count: 0, likes_count: 0, followers_count: 0, following_count: 0, total_points: 0, week_points: 0, rank: '—', activity_count: 0 })
     addToast('已退出登录', 'info')
   }
 
-  const handleLike = async (workId) => {
-    if (!user) { addToast('请先登录', 'warning'); return }
-    try {
-      const res = await fetch(`${API}/works/${workId}/like`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user.id })
-      })
-      const data = await res.json()
-      setWorks(works.map(w => w.id === workId ? { ...w, likes_count: data.likes_count } : w))
-    } catch {}
-  }
-
-  if (!authUser) {
+  if (!authUser && !userId) {
     return (
       <div style={{ maxWidth: 400, margin: '0 auto' }}>
         <h1 style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 24 }}>👤 个人中心</h1>
@@ -172,36 +191,98 @@ export default function Profile() {
     )
   }
 
+  if (loading) return <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>加载中...</div>
+  if (!profileUser && !isOwn) return <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>用户不存在</div>
+
+  const displayUser = profileUser || authUser
   const statStyle = { textAlign: 'center' }
   const statValStyle = { fontWeight: 'bold', fontSize: 18, color: 'var(--text)' }
   const statLabelStyle = { color: 'var(--text-3)', fontSize: 12 }
+
+  const avatarUrl = displayUser?.avatar_url
+    ? (displayUser.avatar_url.startsWith('http') ? displayUser.avatar_url : `${API}${displayUser.avatar_url}`)
+    : `https://api.dicebear.com/7.x/initials/svg?seed=${displayUser?.username}&backgroundColor=a67f50`
+
+  const activityTypeIcon = {
+    post_work: '📤', vote: '🗳️', follow_user: '🔗', comment: '💬', like: '❤️'
+  }
 
   return (
     <div>
       <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px var(--shadow)', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-          <AvatarUpload user={user} onUpdate={(u) => { setUser(u); login(u, '') }} />
+          <div>
+            <img src={avatarUrl} alt={displayUser?.username} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
+              onError={e => { e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${displayUser?.username}&backgroundColor=a67f50` }} />
+          </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 'bold', color: 'var(--text)' }}>{user?.username}</h2>
-              {user?.is_admin === 1 && <span style={{ padding: '2px 8px', background: 'var(--primary)', color: '#fff', borderRadius: 4, fontSize: 12 }}>管理员</span>}
+              <h2 style={{ fontSize: 20, fontWeight: 'bold', color: 'var(--text)' }}>{displayUser?.username}</h2>
+              {userStats.rank !== '—' && (
+                <span style={{ padding: '2px 8px', background: userStats.rank <= 3 ? '#f59e0b' : 'var(--surface-2)', color: userStats.rank <= 3 ? '#fff' : 'var(--text-2)', borderRadius: 4, fontSize: 12 }}>
+                  #{userStats.rank}
+                </span>
+              )}
+              {userStats.total_points > 0 && (
+                <span style={{ padding: '2px 8px', background: 'var(--primary)', color: '#fff', borderRadius: 4, fontSize: 12 }}>
+                  ⭐ {userStats.total_points}积分
+                </span>
+              )}
             </div>
-            <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 12 }}>{user?.email}</p>
+            <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 12 }}>{displayUser?.email}</p>
             <div style={{ display: 'flex', gap: 24, fontSize: 14 }}>
-              <div style={statStyle}><div style={statValStyle}>{userStats.works_count}</div><div style={statLabelStyle}>作品</div></div>
-              <div style={statStyle}><div style={statValStyle}>{userStats.likes_count}</div><div style={statLabelStyle}>获赞</div></div>
-              <div style={statStyle}><div style={statValStyle}>{userStats.follows_count}</div><div style={statLabelStyle}>关注</div></div>
+              <div style={statStyle}>
+                <div style={statValStyle}>
+                  <Link to={`/followers/${profileId}`} style={{ color: 'var(--text)', textDecoration: 'none' }}>{userStats.followers_count}</Link>
+                </div>
+                <div style={statLabelStyle}>粉丝</div>
+              </div>
+              <div style={statStyle}>
+                <div style={statValStyle}>
+                  <Link to={`/following/${profileId}`} style={{ color: 'var(--text)', textDecoration: 'none' }}>{userStats.following_count}</Link>
+                </div>
+                <div style={statLabelStyle}>关注</div>
+              </div>
+              <div style={statStyle}>
+                <div style={statValStyle}>{userStats.works_count}</div>
+                <div style={statLabelStyle}>作品</div>
+              </div>
+              <div style={statStyle}>
+                <div style={statValStyle}>{userStats.likes_count}</div>
+                <div style={statLabelStyle}>获赞</div>
+              </div>
+              {userStats.week_points > 0 && (
+                <div style={statStyle}>
+                  <div style={statValStyle}>{userStats.week_points}</div>
+                  <div style={statLabelStyle}>本周</div>
+                </div>
+              )}
             </div>
           </div>
-          <button onClick={handleLogout} style={{ padding: '8px 16px', fontSize: 14, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 8 }}>
-            退出
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {isOwn ? (
+              <>
+                <button onClick={handleLogout} style={{ padding: '8px 16px', fontSize: 14, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                  退出
+                </button>
+              </>
+            ) : authUser && (
+              <button
+                onClick={handleFollow}
+                style={{ padding: '8px 16px', fontSize: 14, borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: followStatus.is_following ? 'var(--surface-2)' : 'var(--primary)',
+                  color: followStatus.is_following ? 'var(--text-2)' : '#fff' }}
+              >
+                {followStatus.is_following ? '已关注' : '+ 关注'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
-        {[['works', `作品 (${works.length})`], ['following', `关注 (${followed.length})`]].map(([key, label]) => (
+        {[['works', `作品 (${works.length})`], ['activities', `动态`], ['following_occ', `关注工种 (${followedOccupations.length})`]].map(([key, label]) => (
           <button key={key} onClick={() => setActiveTab(key)} style={{
             padding: '8px 16px', fontSize: 14, fontWeight: 500, border: 'none', borderBottom: `2px solid ${activeTab === key ? 'var(--primary)' : 'transparent'}`,
             color: activeTab === key ? 'var(--text)' : 'var(--text-3)', background: 'none', cursor: 'pointer'
@@ -216,7 +297,7 @@ export default function Profile() {
           <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-3)' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>📤</div>
             <p>还没有上传作品</p>
-            <Link to="/upload" style={{ marginTop: 12, display: 'inline-block', color: 'var(--primary)' }}>上传第一个作品</Link>
+            {isOwn && <Link to="/upload" style={{ marginTop: 12, display: 'inline-block', color: 'var(--primary)' }}>上传第一个作品</Link>}
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
@@ -225,16 +306,14 @@ export default function Profile() {
                 <Link to={`/works/${work.id}`} style={{ display: 'block' }}>
                   {work.image_url && (
                     <div style={{ aspectRatio: '1', background: 'var(--surface-2)' }}>
-                      <img src={`http://localhost:5001${work.image_url}`} alt={work.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.currentTarget.style.display = 'none'} />
+                      <img src={`${API}${work.image_url}`} alt={work.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.currentTarget.style.display = 'none'} />
                     </div>
                   )}
                   <div style={{ padding: 12 }}>
                     <h3 style={{ fontWeight: 500, fontSize: 14, color: 'var(--text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{work.title}</h3>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{work.occupation_name}</span>
-                      <button onClick={(e) => { e.preventDefault(); handleLike(work.id) }} style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                        ❤️ {work.likes_count}
-                      </button>
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>❤️ {work.likes_count}</span>
                     </div>
                   </div>
                 </Link>
@@ -244,8 +323,32 @@ export default function Profile() {
         )
       )}
 
-      {activeTab === 'following' && (
-        followed.length === 0 ? (
+      {activeTab === 'activities' && (
+        activities.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-3)' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>📋</div>
+            <p>暂无动态</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {activities.map(act => (
+              <div key={act.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'var(--surface)', borderRadius: 10, marginBottom: 8, boxShadow: '0 1px 2px var(--shadow)' }}>
+                <span style={{ fontSize: 20 }}>{activityTypeIcon[act.activity_type] || '📌'}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, color: 'var(--text)' }}>{act.description}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{act.created_at?.slice(0, 16)?.replace('T', ' ')}</div>
+                </div>
+                {act.points_earned > 0 && (
+                  <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 500 }}>+{act.points_earned}积分</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {activeTab === 'following_occ' && (
+        followedOccupations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-3)' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🏭</div>
             <p>还没有关注任何工种</p>
@@ -253,7 +356,7 @@ export default function Profile() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
-            {followed.map(f => (
+            {followedOccupations.map(f => (
               <Link key={f.id} to={`/occupations/${f.id}`}>
                 <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px var(--shadow)' }}>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>{f.icon || '⚙️'}</div>

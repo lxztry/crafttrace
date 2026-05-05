@@ -14,6 +14,9 @@ import Exhibition from './pages/Exhibition'
 import ExhibitDetail from './pages/ExhibitDetail'
 import CreateExhibit from './pages/CreateExhibit'
 import Chat from './pages/Chat'
+import Followers from './pages/Followers'
+import Following from './pages/Following'
+import Leaderboard from './pages/Leaderboard'
 
 const API = 'http://localhost:5001/api'
 
@@ -71,6 +74,10 @@ export default function App() {
             <Route path="insights" element={<Insights />} />
             <Route path="milestones" element={<Milestones />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="profile/:userId" element={<Profile />} />
+            <Route path="followers/:userId" element={<Followers />} />
+            <Route path="following/:userId" element={<Following />} />
+            <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="works/:id" element={<WorkDetail />} />
             <Route path="exhibition" element={<Exhibition />} />
             <Route path="exhibits/create" element={<CreateExhibit />} />

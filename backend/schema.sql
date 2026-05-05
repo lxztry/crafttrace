@@ -96,6 +96,39 @@ CREATE TABLE IF NOT EXISTS follows (
     UNIQUE(user_id, occupation_id)
 );
 
+-- 用户关注关系（双向）
+CREATE TABLE IF NOT EXISTS user_follows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    follower_id INTEGER NOT NULL,
+    following_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(follower_id, following_id)
+);
+
+-- 用户积分系统
+CREATE TABLE IF NOT EXISTS user_points (
+    user_id INTEGER PRIMARY KEY,
+    total_points INTEGER DEFAULT 0,
+    work_count INTEGER DEFAULT 0,
+    vote_count INTEGER DEFAULT 0,
+    follow_count INTEGER DEFAULT 0,
+    comment_count INTEGER DEFAULT 0,
+    week_points INTEGER DEFAULT 0,
+    week_started_at TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户动态
+CREATE TABLE IF NOT EXISTS user_activities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    activity_type TEXT NOT NULL,  -- 'post_work' / 'vote' / 'follow_user' / 'comment' / 'like'
+    target_id INTEGER,
+    description TEXT,
+    points_earned INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS score_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     occupation_id INTEGER NOT NULL,
