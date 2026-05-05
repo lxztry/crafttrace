@@ -863,6 +863,127 @@ def seed_data(db):
     print('种子数据初始化完成')
 
 
+@app.route('/api/insights/generate', methods=['POST'])
+def generate_insights():
+    """触发每日洞察生成（需配置AI_API_KEY）"""
+    import subprocess, os
+    try:
+        result = subprocess.run(
+            [sys.executable, 'generate_insights.py'],
+            capture_output=True, text=True, timeout=60,
+            cwd=os.path.dirname(__file__) or '.'
+        )
+        if result.returncode == 0:
+            return jsonify({'message': '洞察生成完成', 'output': result.stdout}), 200
+        return jsonify({'error': result.stderr or '生成失败'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/insights/industry/<category>', methods=['GET'])
+def get_industry_insights(category):
+    """按行业分类获取洞察"""
+    db = get_db()
+    rows = db.execute("""
+        SELECT * FROM insights
+        WHERE occupation_category = ?
+        ORDER BY date DESC
+        LIMIT 20
+    """, (category,)).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route('/api/insights/by-category', methods=['GET'])
+def list_categories():
+    """获取所有有洞察的行业分类"""
+    db = get_db()
+    rows = db.execute("""
+        SELECT occupation_category, COUNT(*) as count
+        FROM insights
+        WHERE occupation_category IS NOT NULL AND occupation_category != ''
+        GROUP BY occupation_category
+        ORDER BY count DESC
+    """).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/users/<int:user_id>', methods=['GET'])
+def get_user_public(user_id):
+    db = get_db()
+    user = db.execute('SELECT id, username, email, avatar_url, bio, created_at FROM users WHERE id = ?', (user_id,)).fetchone()
+    if not user:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify(dict(user))
+
+@app.route('/api/users/<int:user_id>/avatar', methods=['POST'])
+def upload_avatar(user_id):
+    from werkzeug.utils import secure_filename
+    import os
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'no file'}), 400
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify({'error': 'no filename'}), 400
+    ext = os.path.splitext(secure_filename(file.filename))[1] or '.jpg'
+    filename = f'avatar_{user_id}_{int(__import__("time").time())}{ext}'
+    upload_dir = os.path.join(os.path.dirname(__file__), 'static', 'avatars')
+    os.makedirs(upload_dir, exist_ok=True)
+    filepath = os.path.join(upload_dir, filename)
+    file.save(filepath)
+    avatar_url = f'/static/avatars/{filename}'
+    db = get_db()
+    db.execute('UPDATE users SET avatar_url = ? WHERE id = ?', (avatar_url, user_id))
+    db.commit()
+    return jsonify({'avatar_url': avatar_url})
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+def update_user_profile(user_id):
+    data = request.get_json()
+    db = get_db()
+    if 'bio' in data:
+        db.execute('UPDATE users SET bio = ? WHERE id = ?', (data['bio'], user_id))
+    db.commit()
+    user = db.execute('SELECT id, username, email, avatar_url, bio, created_at FROM users WHERE id = ?', (user_id,)).fetchone()
+    return jsonify(dict(user))
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    db = get_db()
+    try:
+        db.execute('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+            (data['username'], data['email'], data.get('password', '')))
+        db.commit()
+        user = db.execute('SELECT * FROM users WHERE username = ?', (data['username'],)).fetchone()
+        return jsonify({'user': dict(user), 'token': str(user['id'])})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE username = ? AND email = ?',
+        (data.get('username', ''), data.get('email', ''))).fetchone()
+    if not user:
+        return jsonify({'error': '用户名或邮箱不匹配'}), 401
+    return jsonify({'user': dict(user), 'token': str(user['id'])})
+
+@app.route('/api/follows', methods=['GET'])
+def get_all_follows():
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify([])
+    db = get_db()
+    rows = db.execute('''
+        SELECT o.* FROM follows f
+        JOIN occupations o ON f.occupation_id = o.id
+        WHERE f.user_id = ?
+        ORDER BY f.created_at DESC
+    ''', (user_id,)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5001, debug=True)

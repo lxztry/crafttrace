@@ -67,6 +67,9 @@ CREATE TABLE IF NOT EXISTS insights (
     content TEXT NOT NULL,
     occupation_id INTEGER,
     score_change REAL,
+    source_url TEXT,
+    occupation_category TEXT,
+    metrics_json TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
